@@ -1,196 +1,179 @@
-# Revolt Voice Assistant
+# 🎤 Voice Assistant
 
-A voice-powered AI assistant built with Node.js, Express, and the Gemini Live API. Record your voice, get intelligent responses, and interact naturally with AI.
+A modern, futuristic voice assistant with real-time conversation capabilities, interruption support, and auto-listening features.
 
-## Features
+## ✨ Features
 
-- 🎤 Voice recording with Web Audio API
-- 🤖 AI responses powered by Gemini Live API
-- 🔊 Audio playback of AI responses
-- 📱 Responsive web interface
-- ⚡ Real-time voice processing
+- 🎯 **Real-time Voice Interaction** - Hold to talk, release to get response
+- 🛑 **Smart Interruption** - Interrupt AI while speaking to ask new questions
+- 🔄 **Auto-listening** - Automatically starts listening after each response
+- 🌙 **Dark/Light Mode** - Toggle between themes
+- 📱 **Mobile Responsive** - Works on all devices
+- ⚡ **Low Latency** - Fast responses (1-2 seconds)
+- 🎨 **Futuristic UI** - Glassmorphism design with smooth animations
 
-## Prerequisites
+## 🚀 Quick Start
 
-- Node.js (v18 or higher)
-- A Gemini API key from Google AI Studio
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd voice-assistant
+   ```
 
-## Installation
-
-1. Clone or download this project
-2. Install dependencies:
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. Set up environment variables:
-   - Copy `.env` file and add your Gemini API key:
+3. **Set up environment variables**
+   ```bash
+   # Create .env file
+   GEMINI_API_KEY=your_gemini_api_key_here
+   PORT=8080
    ```
-   GEMINI_API_KEY=your_actual_gemini_api_key_here
-   PORT=3000
+
+4. **Get your Gemini API key**
+   - Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - Create a new API key
+   - Add it to your `.env` file
+
+5. **Start the server**
+   ```bash
+   npm run dev
    ```
 
-## Getting Your Gemini API Key
+6. **Open your browser**
+   ```
+   http://localhost:8080
+   ```
 
-1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Sign in with your Google account
-3. Create a new API key
-4. Copy the key and paste it in your `.env` file
+## 🎮 How to Use
 
-## Running the Application
+### Basic Interaction
+- **Hold the button** → Speak your question
+- **Release the button** → Get AI response
+- **AI speaks back** → Automatically starts listening for next question
 
-### Development Mode
-```bash
-npm run dev
-```
+### Advanced Features
+- **Interrupt AI**: Hold button while AI is speaking to interrupt and ask new question
+- **Auto-listening**: After AI responds, it automatically listens for 10 seconds
+- **Theme Toggle**: Click the toggle in top-right corner to switch themes
+- **Mobile Support**: Touch and hold works on mobile devices
 
-### Production Mode
-```bash
-npm start
-```
-
-The application will be available at `http://localhost:3000`
-
-## Usage
-
-### Live Voice Chat (Recommended)
-1. Open your browser and navigate to `http://localhost:8080/live-voice.html`
-2. Wait for "AI Ready" status with green indicator
-3. Click "Start Talking" and speak naturally
-4. The AI responds in real-time with low latency (1-2 seconds)
-5. Click "Stop AI" anytime to interrupt and speak again
-6. Enjoy natural, conversational flow with interruption support
-
-### Basic Voice Test
-1. Navigate to `http://localhost:8080`
-2. Click "Start Recording" → speak → "Stop Recording"
-3. Wait for AI response
-
-## Key Features
-
-✅ **Real-time conversation** with 1-2 second response latency
-✅ **Smooth interruptions** - interrupt AI while speaking
-✅ **WebSocket streaming** for instant communication
-✅ **Gemini Live API** integration with native audio processing
-✅ **Server-to-server architecture** for optimal performance
-✅ **Auto-reconnection** if connection drops
-✅ **Voice activity detection** for natural flow
-
-## Project Structure
+## 🏗️ Project Structure
 
 ```
-revolt-voice-assistant/
+voice-assistant/
 ├── server/
-│   ├── index.js                # Main Express server
-│   ├── routes/
-│   │   └── voice.js             # API routes for voice processing
-│   ├── services/
-│   │   └── geminiService.js     # Gemini Live API integration
+│   ├── index.js              # Express server
 │   ├── config/
-│   │   └── geminiConfig.js      # API configuration and settings
-│   └── utils/
-│       └── audioUtils.js        # Audio processing utilities
+│   │   └── geminiConfig.js   # API configuration
+│   ├── services/
+│   │   └── geminiService.js  # Gemini API integration
+│   └── routes/
+│       └── voice.js          # Voice API endpoints
 ├── public/
-│   ├── index.html               # Frontend interface
-│   ├── styles.css               # Styling
-│   └── script.js                # Client-side JavaScript
-├── .env                         # Environment variables
-├── package.json                 # Project dependencies
-└── README.md                    # This file
+│   └── index.html            # Complete frontend (HTML + CSS + JS)
+├── .env                      # Environment variables
+├── package.json              # Dependencies
+└── README.md                 # This file
 ```
 
-## API Endpoints
+## 🔧 Configuration
 
-### POST /api/voice
-Processes voice input and returns AI response.
-
-**Request:**
-- Content-Type: `application/json`
-- Body: `{ "audioData": "base64_encoded_audio" }`
-
-**Response:**
-```json
-{
-  "success": true,
-  "audioData": "base64_encoded_response_audio",
-  "mimeType": "audio/wav",
-  "text": "Text version of response"
-}
+### Environment Variables
+```env
+GEMINI_API_KEY=your_api_key_here  # Required: Your Gemini API key
+PORT=8080                         # Optional: Server port (default: 8080)
 ```
 
-## Configuration
-
-### Gemini Model Settings
+### Gemini Settings
 Edit `server/config/geminiConfig.js` to customize:
-- Model parameters
-- System prompt
-- Temperature and response length
-- API endpoints
+- Response length (currently 50 tokens for speed)
+- Temperature (creativity level)
+- System prompt (AI personality)
 
-### Audio Settings
-The application supports:
-- WAV, MP3, and WebM audio formats
-- 16kHz sample rate for optimal quality
-- Automatic format conversion
+## 🎯 Technical Details
 
-## Troubleshooting
+- **Backend**: Node.js + Express
+- **AI**: Google Gemini 1.5 Flash API
+- **Audio**: Web Audio API + MediaRecorder
+- **Speech**: Browser Text-to-Speech
+- **Styling**: Pure CSS with glassmorphism effects
+- **No external dependencies** for frontend
 
-### Common Issues
+## 🚀 Deployment
 
-1. **Microphone not working**
-   - Check browser permissions
-   - Ensure HTTPS in production
-   - Try a different browser
-
-2. **API errors**
-   - Verify your Gemini API key is correct
-   - Check your API quota and billing
-   - Ensure stable internet connection
-
-3. **Audio playback issues**
-   - Check browser audio permissions
-   - Try different audio formats
-   - Verify speakers/headphones
-
-### Error Messages
-
-- `GEMINI_API_KEY not configured`: Add your API key to `.env`
-- `Failed to access microphone`: Grant microphone permissions
-- `Invalid audio format`: Check audio encoding settings
-
-## Development
-
-### Adding New Features
-
-1. **Backend changes**: Modify files in `server/` directory
-2. **Frontend changes**: Edit files in `public/` directory
-3. **API integration**: Update `geminiService.js`
-
-### Testing
-
-Test the voice recording:
+### Local Development
 ```bash
-# Start the server
-npm run dev
-
-# Open browser and test microphone access
-# Check browser console for errors
+npm run dev  # Auto-restart on changes
 ```
 
-## Security Notes
+### Production
+```bash
+npm start    # Standard production start
+```
+
+### Docker (Optional)
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --production
+COPY . .
+EXPOSE 8080
+CMD ["npm", "start"]
+```
+
+## 🔒 Security Notes
 
 - Never commit your `.env` file with real API keys
 - Use HTTPS in production for microphone access
 - Implement rate limiting for production use
-- Validate all audio inputs server-side
+- Validate all inputs server-side
 
-## License
+## 🐛 Troubleshooting
 
-MIT License - feel free to use this project for learning and development.
+### Common Issues
 
-## Support
+1. **Microphone not working**
+   - Check browser permissions (click lock icon in address bar)
+   - Ensure HTTPS in production
+   - Try different browser
 
-For issues with:
-- **Gemini API**: Check [Google AI documentation](https://ai.google.dev/)
-- **Web Audio API**: See [MDN Web Audio docs](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
-- **This project**: Create an issue in the repository
+2. **API errors**
+   - Verify Gemini API key is correct
+   - Check API quota limits
+   - Ensure stable internet connection
+
+3. **No audio playback**
+   - Check browser audio permissions
+   - Verify speakers/headphones work
+   - Try different browser
+
+### Error Messages
+- `GEMINI_API_KEY not configured`: Add API key to `.env`
+- `Failed to access microphone`: Grant microphone permissions
+- `API quota exceeded`: Wait or upgrade API plan
+
+## 📝 License
+
+MIT License - feel free to use for personal and commercial projects.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+## 🙏 Acknowledgments
+
+- Google Gemini API for AI capabilities
+- Web Audio API for voice recording
+- Modern CSS features for beautiful UI
+
+---
+
+**Made with ❤️ for seamless voice interactions**
