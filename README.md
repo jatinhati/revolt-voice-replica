@@ -1,6 +1,8 @@
-# 🎤 Voice Assistant
+# Revolt Motors Voice Interface (Gemini Live API)
 
-A modern, futuristic voice assistant with real-time conversation capabilities, interruption support, and auto-listening features.
+This project is a **server-to-server Node.js/Express** application that connects a browser microphone to the **Gemini 2.5 Flash Live API** for real-time speech interaction.
+
+The goal is to allow a user to **speak into their mic**, send the audio stream to the backend, forward it to the Gemini Live API, and receive the AI’s spoken or text response instantly.
 
 ## ✨ Features
 
