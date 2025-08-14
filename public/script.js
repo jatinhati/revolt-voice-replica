@@ -51,9 +51,10 @@ class SimpleVoiceAssistant {
     async startRecording() {
         if (this.isRecording) return;
         
-        // If AI is speaking, interrupt it
+        // If AI is speaking, interrupt it (but don't auto-start recording)
         if (this.isAISpeaking) {
             this.interruptAI();
+            return; // Exit here, let interrupt handle the recording
         }
         
         try {
@@ -222,7 +223,7 @@ class SimpleVoiceAssistant {
         speechSynthesis.speak(this.currentUtterance);
     }
     
-    interruptAI() {
+    async interruptAI() {
         console.log('🛑 Interrupting AI...');
         
         // Stop speech synthesis immediately
@@ -234,15 +235,52 @@ class SimpleVoiceAssistant {
         this.isAISpeaking = false;
         this.currentUtterance = null;
         
-        // Update UI
-        this.status.textContent = 'Interrupted - Now listening...';
-        this.status.classList.add('active');
-        
         // Add visual feedback for interruption
         this.response.style.opacity = '0.5';
         setTimeout(() => {
             this.response.style.opacity = '1';
         }, 300);
+        
+        // Start recording directly (bypass the startRecording checks)
+        try {
+            this.hideError();
+            this.status.textContent = 'Interrupted - Now listening...';
+            this.status.classList.add('active');
+            this.waveAnimation.classList.add('active');
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true
+                }
+            });
+            
+            this.mediaRecorder = new MediaRecorder(stream);
+            this.audioChunks = [];
+            
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.audioChunks.push(event.data);
+                }
+            };
+            
+            this.mediaRecorder.onstop = () => {
+                stream.getTracks().forEach(track => track.stop());
+                this.processRecording();
+            };
+            
+            this.mediaRecorder.start();
+            this.isRecording = true;
+            this.recordBtn.classList.add('recording');
+            this.recordBtn.classList.remove('ai-speaking');
+            this.recordBtn.querySelector('.btn-text').textContent = 'TALK';
+            
+        } catch (error) {
+            this.showError('Failed to start recording after interrupt: ' + error.message);
+            this.resetUI();
+        }
     }
 }
 
