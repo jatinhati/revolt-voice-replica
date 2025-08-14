@@ -1,44 +1,68 @@
-class VoiceAssistant {
+class SimpleVoiceAssistant {
     constructor() {
         this.mediaRecorder = null;
         this.audioChunks = [];
         this.isRecording = false;
-        this.isProcessing = false;
-
+        this.isAISpeaking = false;
+        this.currentUtterance = null;
+        this.autoStopTimeout = null;
+        
         this.recordBtn = document.getElementById('recordBtn');
-        this.btnText = document.querySelector('.btn-text');
         this.status = document.getElementById('status');
-        this.responseText = document.getElementById('responseText');
-        this.responseAudio = document.getElementById('responseAudio');
-        this.errorSection = document.getElementById('errorSection');
-        this.errorMessage = document.getElementById('errorMessage');
-
+        this.response = document.getElementById('response');
+        this.error = document.getElementById('error');
+        this.waveAnimation = document.getElementById('waveAnimation');
+        this.themeToggle = document.getElementById('themeToggle');
+        
         this.initializeEventListeners();
+        this.initializeTheme();
     }
-
-    initializeEventListeners() {
-        this.recordBtn.addEventListener('click', () => {
-            if (this.isProcessing) return;
-
-            if (this.isRecording) {
-                this.stopRecording();
-            } else {
-                this.startRecording();
-            }
+    
+    initializeTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        this.themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
         });
     }
-
+    
+    initializeEventListeners() {
+        // Mouse events
+        this.recordBtn.addEventListener('mousedown', () => this.startRecording());
+        this.recordBtn.addEventListener('mouseup', () => this.stopRecording());
+        this.recordBtn.addEventListener('mouseleave', () => this.stopRecording());
+        
+        // Touch events for mobile
+        this.recordBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.startRecording();
+        });
+        this.recordBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.stopRecording();
+        });
+    }
+    
     async startRecording() {
+        if (this.isRecording) return;
+        
+        // If AI is speaking, interrupt it
+        if (this.isAISpeaking) {
+            this.interruptAI();
+        }
+        
         try {
             this.hideError();
-            console.log('Requesting microphone access...');
-
-            // Check if getUserMedia is supported
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error('Your browser does not support microphone access');
-            }
-
-            const stream = await navigator.mediaDevices.getUserMedia({
+            this.status.textContent = 'Listening...';
+            this.status.classList.add('active');
+            this.waveAnimation.classList.add('active');
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     sampleRate: 16000,
                     channelCount: 1,
@@ -46,136 +70,103 @@ class VoiceAssistant {
                     noiseSuppression: true
                 }
             });
-
-            console.log('Microphone access granted');
-
-            // Check supported MIME types
-            let mimeType = 'audio/webm;codecs=opus';
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'audio/webm';
-                if (!MediaRecorder.isTypeSupported(mimeType)) {
-                    mimeType = 'audio/mp4';
-                    if (!MediaRecorder.isTypeSupported(mimeType)) {
-                        mimeType = ''; // Use default
-                    }
-                }
-            }
-
-            console.log('Using MIME type:', mimeType || 'default');
-
-            this.mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
-
+            
+            this.mediaRecorder = new MediaRecorder(stream);
             this.audioChunks = [];
-
+            
             this.mediaRecorder.ondataavailable = (event) => {
-                console.log('Audio data received:', event.data.size, 'bytes');
                 if (event.data.size > 0) {
                     this.audioChunks.push(event.data);
                 }
             };
-
+            
             this.mediaRecorder.onstop = () => {
-                console.log('Recording stopped, processing...');
-                this.processRecording();
                 stream.getTracks().forEach(track => track.stop());
+                this.processRecording();
             };
-
-            this.mediaRecorder.start(1000); // Collect data every 1 second
-            this.updateUI('recording');
-            console.log('Recording started');
-
+            
+            this.mediaRecorder.start();
+            this.isRecording = true;
+            this.recordBtn.classList.add('recording');
+            
         } catch (error) {
-            console.error('Error starting recording:', error);
-            let errorMessage = 'Failed to access microphone. ';
-
-            if (error.name === 'NotAllowedError') {
-                errorMessage += 'Please allow microphone access and try again.';
-            } else if (error.name === 'NotFoundError') {
-                errorMessage += 'No microphone found. Please connect a microphone.';
-            } else if (error.name === 'NotSupportedError') {
-                errorMessage += 'Your browser does not support audio recording.';
-            } else {
-                errorMessage += error.message;
-            }
-
-            this.showError(errorMessage);
+            this.showError('Microphone access denied. Please allow microphone access.');
+            this.resetUI();
         }
     }
-
+    
     stopRecording() {
-        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-            this.mediaRecorder.stop();
-            this.updateUI('processing');
-        }
+        if (!this.isRecording) return;
+        
+        this.mediaRecorder.stop();
+        this.isRecording = false;
+        this.recordBtn.classList.remove('recording');
+        this.waveAnimation.classList.remove('active');
+        this.status.textContent = 'Processing...';
     }
-
+    
     async processRecording() {
         try {
-            console.log('Processing recording with', this.audioChunks.length, 'chunks');
-
             if (this.audioChunks.length === 0) {
-                throw new Error('No audio data recorded');
+                this.showError('No audio recorded');
+                return;
             }
-
+            
             const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-            console.log('Audio blob size:', audioBlob.size, 'bytes');
-
-            if (audioBlob.size === 0) {
-                throw new Error('Audio blob is empty');
-            }
-
-            // Convert to base64
             const base64Audio = await this.blobToBase64(audioBlob);
-            console.log('Base64 audio length:', base64Audio.length);
-
-            if (!base64Audio || base64Audio.length === 0) {
-                throw new Error('Failed to convert audio to base64');
-            }
-
+            
             // Send to backend
-            console.log('Sending audio to backend...');
             const response = await fetch('/api/voice', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    audioData: base64Audio
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audioData: base64Audio })
             });
-
-            console.log('Response status:', response.status);
-            console.log('Response ok:', response.ok);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server error response:', errorText);
-                throw new Error(`Server error: ${response.status} - ${errorText}`);
-            }
             
             const result = await response.json();
-            console.log('Server response:', result);
-
+            
             if (result.success) {
-                this.handleResponse(result);
+                this.displayResponse(result.text);
+                this.resetUI();
+                
+                // Use text-to-speech for audio response
+                if ('speechSynthesis' in window) {
+                    this.speakResponse(result.text);
+                }
             } else {
-                this.showError(result.error || 'Failed to process audio');
+                this.showError(result.error);
             }
-
+            
         } catch (error) {
-            console.error('Error processing recording:', error);
             this.showError('Failed to process recording: ' + error.message);
-        } finally {
-            this.updateUI('ready');
         }
     }
-
-    async convertToWav(audioBlob) {
-        // For now, return the original blob
-        // TODO: Add proper WAV conversion if needed
-        return audioBlob;
+    
+    displayResponse(text) {
+        this.response.classList.remove('empty');
+        this.response.innerHTML = `
+            <div class="response-header">
+                <span class="response-icon">🤖</span>
+                <span class="response-title">AI Assistant</span>
+            </div>
+            <div class="response-content">${text}</div>
+        `;
+        this.response.classList.add('new-message');
+        setTimeout(() => {
+            this.response.classList.remove('new-message');
+        }, 500);
+        
+        // Scroll to top of response
+        this.response.scrollTop = 0;
     }
-
+    
+    resetUI() {
+        this.status.textContent = 'Ready to listen';
+        this.status.classList.remove('active');
+        this.waveAnimation.classList.remove('active');
+        this.recordBtn.classList.remove('ai-speaking');
+        this.recordBtn.querySelector('.btn-text').textContent = 'TALK';
+    }
+    
     blobToBase64(blob) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -187,89 +178,75 @@ class VoiceAssistant {
             reader.readAsDataURL(blob);
         });
     }
-
-    handleResponse(result) {
-        // Display text response if available
-        if (result.text) {
-            this.responseText.textContent = result.text;
-        }
-
-        // Play audio response if available
-        if (result.audioData && result.mimeType) {
-            const audioUrl = `data:${result.mimeType};base64,${result.audioData}`;
-            this.responseAudio.src = audioUrl;
-            this.responseAudio.style.display = 'block';
-            this.responseAudio.play().catch(error => {
-                console.error('Error playing audio:', error);
-            });
-        } else if (result.text) {
-            // If no audio response, use text-to-speech as fallback
-            this.speakText(result.text);
-        }
-    }
-
-    speakText(text) {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 0.9;
-            utterance.pitch = 1;
-            utterance.volume = 0.8;
-            speechSynthesis.speak(utterance);
-        }
-    }
-
-    updateUI(state) {
-        this.recordBtn.classList.remove('recording', 'processing');
-
-        switch (state) {
-            case 'recording':
-                this.isRecording = true;
-                this.isProcessing = false;
-                this.recordBtn.classList.add('recording');
-                this.btnText.textContent = 'Stop Recording';
-                this.status.textContent = 'Recording... Click to stop';
-                break;
-
-            case 'processing':
-                this.isRecording = false;
-                this.isProcessing = true;
-                this.recordBtn.classList.add('processing');
-                this.btnText.textContent = 'Processing...';
-                this.status.textContent = 'Processing your request...';
-                break;
-
-            case 'ready':
-            default:
-                this.isRecording = false;
-                this.isProcessing = false;
-                this.btnText.textContent = 'Start Recording';
-                this.status.textContent = 'Ready to record';
-                break;
-        }
-    }
-
+    
     showError(message) {
-        this.errorMessage.textContent = message;
-        this.errorSection.style.display = 'block';
-        setTimeout(() => {
-            this.hideError();
-        }, 5000);
+        this.error.textContent = message;
+        this.error.style.display = 'block';
+        this.resetUI();
+        setTimeout(() => this.hideError(), 5000);
     }
-
+    
     hideError() {
-        this.errorSection.style.display = 'none';
+        this.error.style.display = 'none';
+    }
+    
+    speakResponse(text) {
+        // Stop any current speech
+        if (this.currentUtterance) {
+            speechSynthesis.cancel();
+        }
+        
+        this.currentUtterance = new SpeechSynthesisUtterance(text);
+        this.currentUtterance.rate = 1.1;
+        this.currentUtterance.pitch = 1.0;
+        
+        // Track AI speaking state
+        this.currentUtterance.onstart = () => {
+            this.isAISpeaking = true;
+            this.status.textContent = 'AI speaking... (Hold button to interrupt)';
+            this.status.classList.add('active');
+            this.recordBtn.classList.add('ai-speaking');
+            this.recordBtn.querySelector('.btn-text').textContent = 'INTERRUPT';
+        };
+        
+        this.currentUtterance.onend = () => {
+            this.isAISpeaking = false;
+            this.resetUI();
+        };
+        
+        this.currentUtterance.onerror = () => {
+            this.isAISpeaking = false;
+            this.resetUI();
+        };
+        
+        speechSynthesis.speak(this.currentUtterance);
+    }
+    
+    interruptAI() {
+        console.log('🛑 Interrupting AI...');
+        
+        // Stop speech synthesis immediately
+        if (speechSynthesis.speaking) {
+            speechSynthesis.cancel();
+        }
+        
+        // Reset AI speaking state
+        this.isAISpeaking = false;
+        this.currentUtterance = null;
+        
+        // Update UI
+        this.status.textContent = 'Interrupted - Now listening...';
+        this.status.classList.add('active');
+        
+        // Add visual feedback for interruption
+        this.response.style.opacity = '0.5';
+        setTimeout(() => {
+            this.response.style.opacity = '1';
+        }, 300);
     }
 }
 
 // Initialize the voice assistant when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    const assistant = new VoiceAssistant();
-
-    // Test microphone access on page load
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        console.log('Microphone API is supported');
-    } else {
-        console.error('Microphone API is not supported');
-        assistant.showError('Your browser does not support microphone access');
-    }
+    new SimpleVoiceAssistant();
 });
